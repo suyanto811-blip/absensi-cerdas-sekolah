@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Users, Plus, Upload, Edit, Trash2, Search } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Users, Plus, Upload, Edit, Trash2, Search, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/Layout";
+import * as XLSX from 'xlsx';
 
 interface Student {
   id: string;
@@ -33,6 +34,8 @@ const DataSiswa = () => {
   const [selectedClass, setSelectedClass] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     student_id: "",
     name: "",
@@ -170,6 +173,127 @@ const DataSiswa = () => {
     setIsAddDialogOpen(true);
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      toast({
+        title: "Error",
+        description: "File harus berformat Excel (.xlsx atau .xls)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsImporting(true);
+    
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      // Skip header row and process data
+      const rows = jsonData.slice(1) as any[][];
+      const studentsToImport = [];
+      let errors = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.length === 0) continue;
+
+        const [nis, name, className, gender, phone, address, parentName, parentPhone] = row;
+        
+        if (!nis || !name || !className) {
+          errors.push(`Baris ${i + 2}: NIS, Nama, dan Kelas wajib diisi`);
+          continue;
+        }
+
+        // Find class by name
+        const classData = classes.find(c => c.name.toLowerCase() === className.toString().toLowerCase());
+        if (!classData) {
+          errors.push(`Baris ${i + 2}: Kelas "${className}" tidak ditemukan`);
+          continue;
+        }
+
+        // Check if student already exists
+        const existingStudent = students.find(s => s.student_id === nis.toString());
+        if (existingStudent) {
+          errors.push(`Baris ${i + 2}: Siswa dengan NIS "${nis}" sudah ada`);
+          continue;
+        }
+
+        studentsToImport.push({
+          student_id: nis.toString(),
+          name: name.toString(),
+          class_id: classData.id,
+          gender: gender ? gender.toString() : null,
+          phone: phone ? phone.toString() : null,
+          address: address ? address.toString() : null,
+          parent_name: parentName ? parentName.toString() : null,
+          parent_phone: parentPhone ? parentPhone.toString() : null,
+          is_active: true
+        });
+      }
+
+      if (errors.length > 0) {
+        toast({
+          title: "Peringatan",
+          description: `${errors.length} baris gagal diimport. Periksa format data.`,
+          variant: "destructive",
+        });
+        console.log("Import errors:", errors);
+      }
+
+      if (studentsToImport.length > 0) {
+        const { error } = await (supabase as any)
+          .from('students')
+          .insert(studentsToImport);
+
+        if (error) throw error;
+
+        toast({
+          title: "Berhasil",
+          description: `${studentsToImport.length} siswa berhasil diimport`,
+        });
+
+        fetchStudents();
+      }
+
+    } catch (error) {
+      console.error('Error importing Excel file:', error);
+      toast({
+        title: "Error",
+        description: "Gagal mengimport file Excel",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const downloadTemplate = () => {
+    const template = [
+      ['NIS', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin', 'No HP Siswa', 'Alamat', 'Nama Orang Tua', 'No HP Orang Tua'],
+      ['12345', 'John Doe', '7A', 'Laki-laki', '081234567890', 'Jl. Contoh No. 1', 'Jane Doe', '081234567891'],
+      ['12346', 'Jane Smith', '7B', 'Perempuan', '081234567892', 'Jl. Contoh No. 2', 'John Smith', '081234567893'],
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(template);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template Data Siswa");
+    XLSX.writeFile(wb, "template_data_siswa.xlsx");
+
+    toast({
+      title: "Template Downloaded",
+      description: "Template Excel berhasil didownload",
+    });
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -211,18 +335,29 @@ const DataSiswa = () => {
                 </SelectContent>
               </Select>
               <div className="flex gap-2">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                />
                 <Button
                   variant="outline"
                   className="flex items-center gap-2"
-                  onClick={() => {
-                    toast({
-                      title: "Fitur Import Excel",
-                      description: "Fitur ini akan segera tersedia",
-                    });
-                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isImporting}
                 >
                   <Upload className="h-4 w-4" />
-                  Import Excel
+                  {isImporting ? "Mengimport..." : "Import Excel"}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2 border-education-primary/20 text-education-primary hover:bg-education-primary/10"
+                  onClick={downloadTemplate}
+                >
+                  <Download className="h-4 w-4" />
+                  Template
                 </Button>
                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild>
