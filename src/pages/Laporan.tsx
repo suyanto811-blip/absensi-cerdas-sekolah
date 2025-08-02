@@ -164,9 +164,9 @@ const Laporan = () => {
     <Layout>
       <div className="space-y-6">
         <Card>
-          <CardHeader className="bg-gradient-to-r from-school-yellow/10 to-accent/10 border-b border-accent/20">
+          <CardHeader className="bg-gradient-to-r from-education-primary/10 to-education-accent/10 border-b border-education-accent/20">
             <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-6 w-6 text-accent" />
+              <BarChart3 className="h-6 w-6 text-education-primary" />
               Laporan Absensi Bulanan
             </CardTitle>
             <CardDescription>

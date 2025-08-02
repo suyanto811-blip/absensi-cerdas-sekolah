@@ -174,9 +174,9 @@ const DataSiswa = () => {
     <Layout>
       <div className="space-y-6">
         <Card>
-          <CardHeader className="bg-gradient-to-r from-school-orange/10 to-secondary/10 border-b border-secondary/20">
+          <CardHeader className="bg-gradient-to-r from-education-primary/10 to-education-secondary/10 border-b border-education-secondary/20">
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-6 w-6 text-secondary" />
+              <Users className="h-6 w-6 text-education-secondary" />
               Manajemen Data Siswa
             </CardTitle>
             <CardDescription>
@@ -226,7 +226,7 @@ const DataSiswa = () => {
                 </Button>
                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button className="bg-gradient-to-r from-school-orange to-secondary hover:from-school-orange/90 hover:to-secondary/90">
+                    <Button className="bg-gradient-to-r from-education-primary to-education-secondary hover:from-education-primary/90 hover:to-education-secondary/90 text-white">
                       <Plus className="h-4 w-4 mr-2" />
                       Tambah Siswa
                     </Button>
