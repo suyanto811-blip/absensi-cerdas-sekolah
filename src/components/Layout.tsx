@@ -1,15 +1,18 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   Users, 
   ClipboardList, 
   BarChart3, 
   Menu, 
   X,
-  School
+  School,
+  LogOut,
+  User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 const navigation = [
   { name: "Form Absensi", href: "/", icon: ClipboardList },
@@ -24,6 +27,13 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { adminUser, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -40,7 +50,7 @@ export function Layout({ children }: LayoutProps) {
               {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-school-blue to-primary">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-education-primary to-education-secondary">
                 <School className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
@@ -49,13 +59,28 @@ export function Layout({ children }: LayoutProps) {
               </div>
             </div>
           </div>
-          <div className="text-sm text-muted-foreground">
-            {new Date().toLocaleDateString('id-ID', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-education-secondary">
+              <User className="h-4 w-4" />
+              <span className="text-sm font-medium">{adminUser?.fullName}</span>
+            </div>
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              size="sm"
+              className="border-education-primary/20 text-education-secondary hover:bg-education-primary/10"
+            >
+              <LogOut className="h-4 w-4 mr-1" />
+              Logout
+            </Button>
+            <div className="text-sm text-muted-foreground hidden md:block">
+              {new Date().toLocaleDateString('id-ID', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </div>
           </div>
         </div>
       </header>
@@ -78,7 +103,7 @@ export function Layout({ children }: LayoutProps) {
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                       isActive
-                        ? "bg-gradient-to-r from-school-blue/10 to-primary/10 text-primary border border-primary/20"
+                        ? "bg-gradient-to-r from-education-primary/10 to-education-secondary/10 text-primary border border-primary/20"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     )}
                   >

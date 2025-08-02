@@ -17,17 +17,17 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 8 47% 9%;
 
-    --primary: 220 91% 58%;
+    --primary: 214 84% 56%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 25 95% 53%;
+    --secondary: 220 39% 11%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 220 13% 91%;
     --muted-foreground: 220 9% 46%;
 
-    --accent: 48 96% 53%;
-    --accent-foreground: 8 47% 9%;
+    --accent: 197 71% 73%;
+    --accent-foreground: 220 39% 11%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
@@ -36,19 +36,19 @@ All colors MUST be HSL.
     --input: 220 13% 91%;
     --ring: 220 91% 58%;
 
-    /* Custom colors for school theme */
-    --school-blue: 220 91% 58%;
-    --school-orange: 25 95% 53%;
-    --school-yellow: 48 96% 53%;
+    /* Custom colors for elegant education theme */
+    --education-primary: 214 84% 56%;
+    --education-secondary: 220 39% 11%;
+    --education-accent: 197 71% 73%;
     
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--school-blue)), hsl(var(--primary)));
-    --gradient-secondary: linear-gradient(135deg, hsl(var(--school-orange)), hsl(var(--secondary)));
-    --gradient-accent: linear-gradient(135deg, hsl(var(--school-yellow)), hsl(var(--accent)));
+    --gradient-primary: linear-gradient(135deg, hsl(var(--education-primary)), hsl(var(--education-secondary)));
+    --gradient-secondary: linear-gradient(135deg, hsl(var(--education-secondary)), hsl(var(--education-accent)));
+    --gradient-accent: linear-gradient(135deg, hsl(var(--education-accent)), hsl(var(--education-primary)));
 
-    /* Shadows with school theme */
-    --shadow-primary: 0 10px 30px -10px hsl(var(--school-blue) / 0.3);
-    --shadow-card: 0 4px 20px -4px hsl(var(--school-blue) / 0.1);
+    /* Shadows with education theme */
+    --shadow-primary: 0 10px 30px -10px hsl(var(--education-primary) / 0.3);
+    --shadow-card: 0 4px 20px -4px hsl(var(--education-primary) / 0.1);
 
     --radius: 0.5rem;
 
