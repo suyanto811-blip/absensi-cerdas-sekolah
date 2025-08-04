@@ -108,44 +108,32 @@ export type Database = {
       }
       students: {
         Row: {
-          address: string | null
           class_id: string | null
           created_at: string
           gender: string | null
           id: string
           is_active: boolean | null
           name: string
-          parent_name: string | null
-          parent_phone: string | null
-          phone: string | null
           student_id: string
           updated_at: string
         }
         Insert: {
-          address?: string | null
           class_id?: string | null
           created_at?: string
           gender?: string | null
           id?: string
           is_active?: boolean | null
           name: string
-          parent_name?: string | null
-          parent_phone?: string | null
-          phone?: string | null
           student_id: string
           updated_at?: string
         }
         Update: {
-          address?: string | null
           class_id?: string | null
           created_at?: string
           gender?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
-          parent_name?: string | null
-          parent_phone?: string | null
-          phone?: string | null
           student_id?: string
           updated_at?: string
         }

@@ -19,10 +19,6 @@ interface Student {
   name: string;
   class_id: string;
   gender: string;
-  phone: string;
-  address: string;
-  parent_name: string;
-  parent_phone: string;
   is_active: boolean;
   classes?: { name: string };
 }
@@ -40,11 +36,7 @@ const DataSiswa = () => {
     student_id: "",
     name: "",
     class_id: "",
-    gender: "",
-    phone: "",
-    address: "",
-    parent_name: "",
-    parent_phone: ""
+    gender: ""
   });
   const { toast } = useToast();
 
@@ -114,11 +106,7 @@ const DataSiswa = () => {
         student_id: "",
         name: "",
         class_id: "",
-        gender: "",
-        phone: "",
-        address: "",
-        parent_name: "",
-        parent_phone: ""
+        gender: ""
       });
       fetchStudents();
     } catch (error) {
@@ -164,11 +152,7 @@ const DataSiswa = () => {
       student_id: student.student_id,
       name: student.name,
       class_id: student.class_id,
-      gender: student.gender,
-      phone: student.phone || "",
-      address: student.address || "",
-      parent_name: student.parent_name || "",
-      parent_phone: student.parent_phone || ""
+      gender: student.gender
     });
     setIsAddDialogOpen(true);
   };
@@ -203,10 +187,10 @@ const DataSiswa = () => {
         const row = rows[i];
         if (!row || row.length === 0) continue;
 
-        const [nis, name, className, gender, phone, address, parentName, parentPhone] = row;
+        const [nis, name, className, gender] = row;
         
-        if (!nis || !name || !className) {
-          errors.push(`Baris ${i + 2}: NIS, Nama, dan Kelas wajib diisi`);
+        if (!nis || !name || !className || !gender) {
+          errors.push(`Baris ${i + 2}: NIS, Nama, Kelas, dan Jenis Kelamin wajib diisi`);
           continue;
         }
 
@@ -228,11 +212,7 @@ const DataSiswa = () => {
           student_id: nis.toString(),
           name: name.toString(),
           class_id: classData.id,
-          gender: gender ? gender.toString() : null,
-          phone: phone ? phone.toString() : null,
-          address: address ? address.toString() : null,
-          parent_name: parentName ? parentName.toString() : null,
-          parent_phone: parentPhone ? parentPhone.toString() : null,
+          gender: gender.toString(),
           is_active: true
         });
       }
@@ -278,9 +258,9 @@ const DataSiswa = () => {
 
   const downloadTemplate = () => {
     const template = [
-      ['NIS', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin', 'No HP Siswa', 'Alamat', 'Nama Orang Tua', 'No HP Orang Tua'],
-      ['12345', 'John Doe', '7A', 'Laki-laki', '081234567890', 'Jl. Contoh No. 1', 'Jane Doe', '081234567891'],
-      ['12346', 'Jane Smith', '7B', 'Perempuan', '081234567892', 'Jl. Contoh No. 2', 'John Smith', '081234567893'],
+      ['NIS', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin'],
+      ['12345', 'John Doe', '7A', 'Laki-laki'],
+      ['12346', 'Jane Smith', '7B', 'Perempuan'],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(template);
@@ -421,43 +401,6 @@ const DataSiswa = () => {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div>
-                        <Label htmlFor="phone">No. HP Siswa</Label>
-                        <Input
-                          id="phone"
-                          value={formData.phone}
-                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                          placeholder="Nomor HP siswa"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="parent_name">Nama Orang Tua</Label>
-                        <Input
-                          id="parent_name"
-                          value={formData.parent_name}
-                          onChange={(e) => setFormData({...formData, parent_name: e.target.value})}
-                          placeholder="Nama orang tua/wali"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="parent_phone">No. HP Orang Tua</Label>
-                        <Input
-                          id="parent_phone"
-                          value={formData.parent_phone}
-                          onChange={(e) => setFormData({...formData, parent_phone: e.target.value})}
-                          placeholder="Nomor HP orang tua"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label htmlFor="address">Alamat</Label>
-                        <Textarea
-                          id="address"
-                          value={formData.address}
-                          onChange={(e) => setFormData({...formData, address: e.target.value})}
-                          placeholder="Alamat lengkap siswa"
-                          className="resize-none"
-                        />
-                      </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-4">
                       <Button
@@ -501,14 +444,8 @@ const DataSiswa = () => {
                               {student.gender}
                             </Badge>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground">
+                          <div className="text-sm text-muted-foreground">
                             <p><strong>NIS:</strong> {student.student_id}</p>
-                            <p><strong>HP:</strong> {student.phone || "Tidak ada"}</p>
-                            <p><strong>Orang Tua:</strong> {student.parent_name || "Tidak ada"}</p>
-                            <p><strong>HP Orang Tua:</strong> {student.parent_phone || "Tidak ada"}</p>
-                            {student.address && (
-                              <p className="md:col-span-2"><strong>Alamat:</strong> {student.address}</p>
-                            )}
                           </div>
                         </div>
                         <div className="flex gap-2">
