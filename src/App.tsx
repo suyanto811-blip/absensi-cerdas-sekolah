@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
 import FormAbsensi from "./pages/FormAbsensi";
 import DataSiswa from "./pages/DataSiswa";
 import Laporan from "./pages/Laporan";
@@ -22,7 +23,8 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<ProtectedRoute><FormAbsensi /></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/absensi" element={<ProtectedRoute><FormAbsensi /></ProtectedRoute>} />
             <Route path="/siswa" element={<ProtectedRoute><DataSiswa /></ProtectedRoute>} />
             <Route path="/laporan" element={<ProtectedRoute><Laporan /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

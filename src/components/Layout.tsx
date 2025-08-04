@@ -15,7 +15,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
 const navigation = [
-  { name: "Form Absensi", href: "/", icon: ClipboardList },
+  { name: "Dashboard", href: "/", icon: BarChart3 },
+  { name: "Form Absensi", href: "/absensi", icon: ClipboardList },
   { name: "Data Siswa", href: "/siswa", icon: Users },
   { name: "Laporan", href: "/laporan", icon: BarChart3 },
 ];
