@@ -161,10 +161,21 @@ const DataSiswa = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate file type
     if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
       toast({
-        title: "Error",
+        title: "Format File Tidak Valid",
         description: "File harus berformat Excel (.xlsx atau .xls)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Terlalu Besar",
+        description: "Ukuran file maksimal 5MB",
         variant: "destructive",
       });
       return;
@@ -175,77 +186,188 @@ const DataSiswa = () => {
     try {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
+      
+      if (!workbook.SheetNames.length) {
+        throw new Error("File Excel tidak memiliki sheet");
+      }
+      
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-      // Skip header row and process data
+      if (jsonData.length < 2) {
+        toast({
+          title: "Data Kosong",
+          description: "File Excel tidak memiliki data atau hanya berisi header",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate header format
+      const headers = jsonData[0] as string[];
+      const expectedHeaders = ['NIS', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin'];
+      const headerValid = expectedHeaders.every((header, index) => 
+        headers[index]?.toString().toLowerCase().includes(header.toLowerCase().split(' ')[0])
+      );
+
+      if (!headerValid) {
+        toast({
+          title: "Format Header Salah",
+          description: `Header harus: ${expectedHeaders.join(', ')}. Download template untuk format yang benar.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Process data rows
       const rows = jsonData.slice(1) as any[][];
       const studentsToImport = [];
-      let errors = [];
+      const errors: string[] = [];
+      const warnings: string[] = [];
+      let processedCount = 0;
 
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
-        if (!row || row.length === 0) continue;
-
-        const [nis, name, className, gender] = row;
+        const rowNumber = i + 2;
         
-        if (!nis || !name || !className || !gender) {
-          errors.push(`Baris ${i + 2}: NIS, Nama, Kelas, dan Jenis Kelamin wajib diisi`);
+        // Skip completely empty rows
+        if (!row || row.every(cell => !cell || cell.toString().trim() === '')) {
           continue;
         }
 
-        // Find class by name
-        const classData = classes.find(c => c.name.toLowerCase() === className.toString().toLowerCase());
+        const [nis, name, className, gender] = row.map(cell => 
+          cell ? cell.toString().trim() : ''
+        );
+        
+        // Validate required fields
+        if (!nis) {
+          errors.push(`Baris ${rowNumber}: NIS tidak boleh kosong`);
+          continue;
+        }
+        if (!name) {
+          errors.push(`Baris ${rowNumber}: Nama tidak boleh kosong`);
+          continue;
+        }
+        if (!className) {
+          errors.push(`Baris ${rowNumber}: Kelas tidak boleh kosong`);
+          continue;
+        }
+        if (!gender) {
+          errors.push(`Baris ${rowNumber}: Jenis Kelamin tidak boleh kosong`);
+          continue;
+        }
+
+        // Validate NIS format (should be numeric)
+        if (!/^\d+$/.test(nis)) {
+          errors.push(`Baris ${rowNumber}: NIS harus berupa angka`);
+          continue;
+        }
+
+        // Validate gender
+        const validGenders = ['laki-laki', 'perempuan', 'l', 'p'];
+        const normalizedGender = gender.toLowerCase();
+        if (!validGenders.includes(normalizedGender)) {
+          errors.push(`Baris ${rowNumber}: Jenis Kelamin harus 'Laki-laki' atau 'Perempuan'`);
+          continue;
+        }
+
+        // Normalize gender
+        const finalGender = normalizedGender === 'l' || normalizedGender === 'laki-laki' ? 'Laki-laki' : 'Perempuan';
+
+        // Find class by name (case insensitive)
+        const classData = classes.find(c => 
+          c.name.toLowerCase().replace(/\s+/g, '') === className.toLowerCase().replace(/\s+/g, '')
+        );
         if (!classData) {
-          errors.push(`Baris ${i + 2}: Kelas "${className}" tidak ditemukan`);
+          errors.push(`Baris ${rowNumber}: Kelas "${className}" tidak ditemukan. Pastikan kelas sudah terdaftar di sistem.`);
           continue;
         }
 
         // Check if student already exists
-        const existingStudent = students.find(s => s.student_id === nis.toString());
+        const existingStudent = students.find(s => s.student_id === nis);
         if (existingStudent) {
-          errors.push(`Baris ${i + 2}: Siswa dengan NIS "${nis}" sudah ada`);
+          if (existingStudent.is_active) {
+            warnings.push(`Baris ${rowNumber}: Siswa dengan NIS "${nis}" sudah aktif`);
+            continue;
+          } else {
+            // Reactivate inactive student
+            warnings.push(`Baris ${rowNumber}: Siswa dengan NIS "${nis}" akan diaktifkan kembali`);
+          }
+        }
+
+        // Validate name length
+        if (name.length < 2) {
+          errors.push(`Baris ${rowNumber}: Nama terlalu pendek (minimal 2 karakter)`);
+          continue;
+        }
+        if (name.length > 100) {
+          errors.push(`Baris ${rowNumber}: Nama terlalu panjang (maksimal 100 karakter)`);
           continue;
         }
 
         studentsToImport.push({
-          student_id: nis.toString(),
-          name: name.toString(),
+          student_id: nis,
+          name: name,
           class_id: classData.id,
-          gender: gender.toString(),
+          gender: finalGender,
           is_active: true
         });
+        processedCount++;
       }
 
+      // Show detailed feedback
       if (errors.length > 0) {
+        const errorMessage = errors.slice(0, 5).join('\n') + 
+          (errors.length > 5 ? `\n... dan ${errors.length - 5} error lainnya` : '');
+        
         toast({
-          title: "Peringatan",
-          description: `${errors.length} baris gagal diimport. Periksa format data.`,
+          title: `${errors.length} Baris Gagal Diimport`,
+          description: errorMessage,
           variant: "destructive",
         });
+        
         console.log("Import errors:", errors);
       }
 
-      if (studentsToImport.length > 0) {
-        const { error } = await (supabase as any)
-          .from('students')
-          .insert(studentsToImport);
+      if (warnings.length > 0) {
+        console.log("Import warnings:", warnings);
+      }
 
-        if (error) throw error;
-
+      if (studentsToImport.length === 0) {
         toast({
-          title: "Berhasil",
-          description: `${studentsToImport.length} siswa berhasil diimport`,
+          title: "Tidak Ada Data Valid",
+          description: "Tidak ada data siswa yang valid untuk diimport",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Import valid students
+      const { error } = await (supabase as any)
+        .from('students')
+        .upsert(studentsToImport, { 
+          onConflict: 'student_id',
+          ignoreDuplicates: false 
         });
 
-        fetchStudents();
-      }
+      if (error) throw error;
+
+      const successMessage = `${studentsToImport.length} siswa berhasil diimport` +
+        (warnings.length > 0 ? ` (${warnings.length} peringatan)` : '') +
+        (errors.length > 0 ? `. ${errors.length} baris diabaikan karena error.` : '');
+
+      toast({
+        title: "Import Berhasil!",
+        description: successMessage,
+      });
+
+      fetchStudents();
 
     } catch (error) {
       console.error('Error importing Excel file:', error);
       toast({
-        title: "Error",
-        description: "Gagal mengimport file Excel",
+        title: "Gagal Import File",
+        description: error instanceof Error ? error.message : "Terjadi kesalahan saat mengimport file Excel",
         variant: "destructive",
       });
     } finally {
@@ -321,6 +443,8 @@ const DataSiswa = () => {
                   onChange={handleFileUpload}
                   accept=".xlsx,.xls"
                   className="hidden"
+                  aria-label="Upload Excel file for student data import"
+                  title="Upload Excel file (.xlsx or .xls) containing student data"
                 />
                 <Button
                   variant="outline"
