@@ -285,12 +285,12 @@ const Dashboard = () => {
                     </Badge>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-yellow-50 border border-yellow-200">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-education-accent/10 to-education-primary/10 border border-education-accent/20">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                      <span className="text-sm font-medium text-yellow-800">Sakit</span>
+                      <div className="w-3 h-3 rounded-full bg-education-accent"></div>
+                      <span className="text-sm font-medium text-education-secondary">Sakit</span>
                     </div>
-                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 font-bold">
+                    <Badge variant="secondary" className="bg-education-accent/10 text-education-secondary font-bold">
                       {stats.todayAttendance.sakit}
                     </Badge>
                   </div>

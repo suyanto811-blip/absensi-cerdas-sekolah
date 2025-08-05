@@ -147,10 +147,10 @@ const Laporan = () => {
   };
 
   const getStatusColor = (percentage: number) => {
-    if (percentage >= 90) return "bg-green-500";
-    if (percentage >= 80) return "bg-yellow-500";
-    if (percentage >= 70) return "bg-orange-500";
-    return "bg-red-500";
+    if (percentage >= 90) return "bg-education-success";
+    if (percentage >= 80) return "bg-education-accent";
+    if (percentage >= 70) return "bg-education-warning";
+    return "bg-destructive";
   };
 
   const exportReport = () => {
@@ -247,12 +247,12 @@ const Laporan = () => {
                   <p className="text-sm text-green-600">Total Hadir</p>
                 </CardContent>
               </Card>
-              <Card className="border-yellow-200 bg-yellow-50">
+              <Card className="border-education-accent/20 bg-gradient-to-br from-education-accent/5 to-education-primary/5">
                 <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-yellow-700">
+                  <div className="text-2xl font-bold text-education-secondary">
                     {reports.reduce((sum, r) => sum + r.izin, 0)}
                   </div>
-                  <p className="text-sm text-yellow-600">Total Izin</p>
+                  <p className="text-sm text-education-secondary/70">Total Izin</p>
                 </CardContent>
               </Card>
               <Card className="border-blue-200 bg-blue-50">
@@ -313,8 +313,8 @@ const Laporan = () => {
                           <div className="font-medium text-green-700">{report.hadir}</div>
                         </div>
                         <div>
-                          <span className="text-yellow-600">Izin:</span>
-                          <div className="font-medium text-yellow-700">{report.izin}</div>
+                          <span className="text-education-accent">Izin:</span>
+                          <div className="font-medium text-education-secondary">{report.izin}</div>
                         </div>
                         <div>
                           <span className="text-blue-600">Sakit:</span>

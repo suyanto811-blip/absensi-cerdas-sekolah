@@ -201,10 +201,10 @@ const Index = () => {
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-yellow-500" />
+                    <Clock className="h-4 w-4 text-education-accent" />
                     <span className="text-sm">Sakit</span>
                   </div>
-                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                  <Badge variant="secondary" className="bg-education-accent/10 text-education-secondary">
                     {stats.todayAttendance.sakit}
                   </Badge>
                 </div>
