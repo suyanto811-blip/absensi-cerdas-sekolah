@@ -55,6 +55,9 @@ export default {
 				'education-primary': 'hsl(var(--education-primary))',
 				'education-secondary': 'hsl(var(--education-secondary))',
 				'education-accent': 'hsl(var(--education-accent))',
+				'education-light': 'hsl(var(--education-light))',
+				'education-success': 'hsl(var(--education-success))',
+				'education-warning': 'hsl(var(--education-warning))',
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
