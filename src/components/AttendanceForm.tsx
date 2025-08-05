@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
-import { Calendar, Save, Users, ClipboardList } from "lucide-react";
+import { Search, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -11,149 +15,119 @@ interface Student {
   id: string;
   student_id: string;
   name: string;
-  classes: { name: string };
-}
-
-interface AttendanceRecord {
-  student_id: string;
-  status: string;
-  notes?: string;
+  class_name: string;
+  gender: string;
 }
 
 const statusOptions = [
-  { value: "Hadir", label: "Hadir", color: "bg-green-500" },
-  { value: "Izin", label: "Izin", color: "bg-yellow-500" },
-  { value: "Sakit", label: "Sakit", color: "bg-blue-500" },
-  { value: "Alpha", label: "Alpha", color: "bg-red-500" },
+  { value: "present", label: "Hadir" },
+  { value: "excused", label: "Izin" },
+  { value: "sick", label: "Sakit" },
+  { value: "absent", label: "Alpha" },
 ];
 
+const getDayName = (date: string) => {
+  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const dayIndex = new Date(date).getDay();
+  return days[dayIndex];
+};
+
 export function AttendanceForm() {
-  const [selectedClass, setSelectedClass] = useState<string>("");
-  const [classes, setClasses] = useState<any[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [attendance, setAttendance] = useState<Record<string, AttendanceRecord>>({});
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [attendanceStatus, setAttendanceStatus] = useState("");
+  const [notes, setNotes] = useState("");
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchClasses();
+    fetchStudents();
   }, []);
-
-  useEffect(() => {
-    if (selectedClass) {
-      fetchStudents();
-    }
-  }, [selectedClass]);
-
-  const fetchClasses = async () => {
-    try {
-      const { data, error } = await (supabase as any)
-        .from('classes')
-        .select('*')
-        .order('grade_level', { ascending: true });
-      
-      if (error) {
-        console.error('Error fetching classes:', error);
-        toast({
-          title: "Error",
-          description: "Gagal memuat data kelas",
-          variant: "destructive",
-        });
-      } else {
-        setClasses(data || []);
-      }
-    } catch (err) {
-      console.error('Error:', err);
-    }
-  };
 
   const fetchStudents = async () => {
     try {
-      const { data, error } = await (supabase as any)
-        .from('students')
+      const { data, error } = await supabase
+        .from("students")
         .select(`
           id,
           student_id,
           name,
-          classes (name)
+          gender,
+          classes!inner(name)
         `)
-        .eq('class_id', selectedClass)
-        .eq('is_active', true)
-        .order('name');
+        .eq("is_active", true)
+        .order("name");
 
-      if (error) {
-        console.error('Error fetching students:', error);
-        toast({
-          title: "Error",
-          description: "Gagal memuat data siswa",
-          variant: "destructive",
-        });
-      } else {
-        setStudents(data || []);
-        // Initialize attendance with default "Hadir" status
-        const initialAttendance: Record<string, AttendanceRecord> = {};
-        (data || []).forEach((student: any) => {
-          initialAttendance[student.id] = {
-            student_id: student.id,
-            status: "Hadir"
-          };
-        });
-        setAttendance(initialAttendance);
-      }
-    } catch (err) {
-      console.error('Error:', err);
+      if (error) throw error;
+      
+      const formattedStudents = data?.map(student => ({
+        id: student.id,
+        student_id: student.student_id,
+        name: student.name,
+        gender: student.gender || "",
+        class_name: (student as any).classes?.name || ""
+      })) || [];
+      
+      setStudents(formattedStudents);
+    } catch (error) {
+      console.error("Error fetching students:", error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat data siswa",
+        variant: "destructive",
+      });
     }
   };
 
-  const updateAttendance = (studentId: string, status: string) => {
-    setAttendance(prev => ({
-      ...prev,
-      [studentId]: {
-        ...prev[studentId],
-        status
-      }
-    }));
+  const handleStudentSelect = (student: Student) => {
+    setSelectedStudent(student);
+    setSearchValue(`${student.student_id} - ${student.name}`);
+    setSearchOpen(false);
+    setAttendanceStatus("");
+    setNotes("");
   };
 
   const saveAttendance = async () => {
-    if (!selectedClass || students.length === 0) {
+    if (!selectedStudent || !selectedDate || !attendanceStatus) {
       toast({
         title: "Error",
-        description: "Pilih kelas terlebih dahulu",
+        description: "Lengkapi semua data yang diperlukan",
         variant: "destructive",
       });
       return;
     }
 
     setLoading(true);
-
     try {
-      const attendanceRecords = Object.values(attendance).map(record => ({
-        student_id: record.student_id,
-        date: selectedDate,
-        status: record.status,
-        notes: record.notes,
-        recorded_by: "Admin" // In real app, this would be the logged-in user
-      }));
-
-      const { error } = await (supabase as any)
-        .from('attendance')
-        .upsert(attendanceRecords, { 
-          onConflict: 'student_id,date'
+      const { error } = await supabase
+        .from("attendance")
+        .upsert({
+          student_id: selectedStudent.id,
+          date: selectedDate,
+          status: attendanceStatus,
+          notes: notes || null,
+          recorded_by: "admin"
+        }, {
+          onConflict: "student_id,date"
         });
 
-      if (error) {
-        throw error;
-      }
-
+      if (error) throw error;
+      
       toast({
         title: "Berhasil",
-        description: `Absensi untuk ${students.length} siswa telah disimpan`,
+        description: "Berhasil menyimpan absensi",
       });
-
+      
+      // Reset form
+      setSelectedStudent(null);
+      setSearchValue("");
+      setAttendanceStatus("");
+      setNotes("");
     } catch (error) {
-      console.error('Error saving attendance:', error);
+      console.error("Error saving attendance:", error);
       toast({
         title: "Error",
         description: "Gagal menyimpan data absensi",
@@ -164,138 +138,153 @@ export function AttendanceForm() {
     }
   };
 
-  const getStatusSummary = () => {
-    const summary = statusOptions.reduce((acc, option) => {
-      acc[option.value] = Object.values(attendance).filter(a => a.status === option.value).length;
-      return acc;
-    }, {} as Record<string, number>);
-    return summary;
+  const handleCancel = () => {
+    setSelectedStudent(null);
+    setSearchValue("");
+    setAttendanceStatus("");
+    setNotes("");
   };
 
-  const summary = getStatusSummary();
-
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="bg-gradient-to-r from-school-blue/10 to-primary/10 border-b border-primary/20">
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="h-6 w-6 text-primary" />
-            Form Absensi Harian
-          </CardTitle>
-          <CardDescription>
-            Input data kehadiran siswa untuk pembelajaran hari ini
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Tanggal</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6">
+          <Button variant="ghost" size="icon" className="text-slate-600">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-semibold text-slate-800">Input Absensi Siswa</h1>
+            <p className="text-sm text-slate-600">SMPN 2 Kebakkramat</p>
+          </div>
+        </div>
+
+        {/* Form Card */}
+        <Card className="shadow-lg border-0">
+          <CardHeader className="bg-white rounded-t-lg">
+            <CardTitle className="flex items-center gap-2 text-slate-700">
+              <div className="w-5 h-5 bg-blue-600 rounded"></div>
+              Form Absensi Harian
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            {/* Date and Day */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="date" className="text-slate-700 font-medium">Tanggal</Label>
+                <Input
+                  id="date"
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="pl-10 pr-3 py-2 w-full border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="border-slate-300"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-slate-700 font-medium">Hari</Label>
+                <Input
+                  value={getDayName(selectedDate)}
+                  readOnly
+                  className="bg-slate-50 border-slate-300"
                 />
               </div>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Kelas</label>
-              <Select value={selectedClass} onValueChange={setSelectedClass}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih kelas" />
+
+            {/* Student Search */}
+            <div className="space-y-2">
+              <Label className="text-slate-700 font-medium">Nomor Induk Siswa (NIS)</Label>
+              <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={searchOpen}
+                    className="w-full justify-start border-slate-300 h-11"
+                  >
+                    <Search className="mr-2 h-4 w-4 text-slate-400" />
+                    {searchValue || "Ketik NIS atau nama siswa..."}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Cari siswa..." 
+                      className="h-11"
+                    />
+                    <CommandList>
+                      <CommandEmpty>Siswa tidak ditemukan.</CommandEmpty>
+                      <CommandGroup>
+                        {students.map((student) => (
+                          <CommandItem
+                            key={student.id}
+                            value={`${student.student_id} ${student.name}`}
+                            onSelect={() => handleStudentSelect(student)}
+                            className="flex flex-col items-start p-3"
+                          >
+                            <div className="font-medium">{student.name}</div>
+                            <div className="text-sm text-slate-600">
+                              NIS: {student.student_id} • {student.class_name} • {student.gender}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Attendance Status */}
+            <div className="space-y-2">
+              <Label className="text-slate-700 font-medium">Status Kehadiran</Label>
+              <Select value={attendanceStatus} onValueChange={setAttendanceStatus}>
+                <SelectTrigger className="border-slate-300 h-11">
+                  <SelectValue placeholder="Pilih status kehadiran" />
                 </SelectTrigger>
                 <SelectContent>
-                  {classes.map(cls => (
-                    <SelectItem key={cls.id} value={cls.id}>
-                      {cls.name}
+                  {statusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-end">
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label className="text-slate-700 font-medium">Keterangan</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Masukkan keterangan atau alasan status kehadiran (opsional)"
+                className="min-h-[100px] border-slate-300 resize-none"
+              />
+              <p className="text-xs text-slate-500">
+                Contoh: Demam tinggi, Ke dokter, Acara keluarga, dll.
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={handleCancel}
+                className="flex-1 border-slate-300 text-slate-700"
+              >
+                Batal
+              </Button>
               <Button 
                 onClick={saveAttendance} 
-                disabled={!selectedClass || students.length === 0 || loading}
-                className="w-full bg-gradient-to-r from-school-blue to-primary hover:from-school-blue/90 hover:to-primary/90"
+                disabled={loading || !selectedStudent || !attendanceStatus}
+                className="flex-1 bg-slate-700 hover:bg-slate-800"
               >
-                <Save className="h-4 w-4 mr-2" />
                 {loading ? "Menyimpan..." : "Simpan Absensi"}
               </Button>
             </div>
-          </div>
-
-          {students.length > 0 && (
-            <>
-              {/* Summary */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                {statusOptions.map(option => (
-                  <div key={option.value} className="text-center">
-                    <div className={`w-8 h-8 ${option.color} rounded-full mx-auto mb-2 flex items-center justify-center text-white font-bold`}>
-                      {summary[option.value] || 0}
-                    </div>
-                    <p className="text-sm font-medium">{option.label}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Student List */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 mb-4">
-                  <Users className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold">Daftar Siswa ({students.length})</h3>
-                </div>
-                
-                {students.map(student => (
-                  <Card key={student.id} className="border border-border/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">{student.name}</h4>
-                          <p className="text-sm text-muted-foreground">NIS: {student.student_id}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          {statusOptions.map(option => (
-                            <Button
-                              key={option.value}
-                              variant={attendance[student.id]?.status === option.value ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => updateAttendance(student.id, option.value)}
-                              className={
-                                attendance[student.id]?.status === option.value
-                                  ? `${option.color} text-white hover:${option.color}/90`
-                                  : "hover:bg-muted"
-                              }
-                            >
-                              {option.label}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </>
-          )}
-
-          {selectedClass && students.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>Tidak ada siswa aktif di kelas ini</p>
-            </div>
-          )}
-
-          {!selectedClass && (
-            <div className="text-center py-8 text-muted-foreground">
-              <ClipboardList className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>Pilih kelas untuk memulai input absensi</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
