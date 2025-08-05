@@ -379,20 +379,63 @@ const DataSiswa = () => {
   };
 
   const downloadTemplate = () => {
+    // Create comprehensive template with examples and instructions
     const template = [
       ['NIS', 'Nama Lengkap', 'Kelas', 'Jenis Kelamin'],
-      ['12345', 'John Doe', '7A', 'Laki-laki'],
-      ['12346', 'Jane Smith', '7B', 'Perempuan'],
+      ['', '', '', ''],
+      ['PETUNJUK PENGISIAN:', '', '', ''],
+      ['- NIS harus berupa angka', '', '', ''],
+      ['- Nama minimal 2 karakter, maksimal 100 karakter', '', '', ''],
+      ['- Kelas harus sesuai dengan yang ada di sistem', '', '', ''],
+      ['- Jenis Kelamin: Laki-laki atau Perempuan (bisa disingkat L/P)', '', '', ''],
+      ['', '', '', ''],
+      ['CONTOH DATA:', '', '', ''],
+      ['12345', 'Ahmad Rizki Pratama', '7A', 'Laki-laki'],
+      ['12346', 'Siti Nurhaliza', '7B', 'Perempuan'],
+      ['12347', 'Budi Santoso', '8A', 'L'],
+      ['12348', 'Dewi Sartika', '8B', 'P'],
+      ['12349', 'Muhammad Fajar', '9A', 'Laki-laki'],
+      ['12350', 'Rina Wulandari', '9B', 'Perempuan'],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(template);
+    
+    // Set column widths for better readability
+    const colWidths = [
+      { wch: 15 }, // NIS
+      { wch: 30 }, // Nama Lengkap
+      { wch: 10 }, // Kelas
+      { wch: 15 }, // Jenis Kelamin
+    ];
+    ws['!cols'] = colWidths;
+    
+    // Style the header row
+    const headerRange = XLSX.utils.decode_range(ws['!ref'] || 'A1:D1');
+    for (let col = headerRange.s.c; col <= headerRange.e.c; col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+      if (!ws[cellAddress]) continue;
+      ws[cellAddress].s = {
+        font: { bold: true },
+        fill: { fgColor: { rgb: "E3F2FD" } },
+        border: {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" }
+        }
+      };
+    }
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Template Data Siswa");
-    XLSX.writeFile(wb, "template_data_siswa.xlsx");
+    
+    // Add current date to filename
+    const currentDate = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `template_data_siswa_${currentDate}.xlsx`);
 
     toast({
-      title: "Template Downloaded",
-      description: "Template Excel berhasil didownload",
+      title: "Template Berhasil Didownload",
+      description: "Template Excel dengan petunjuk pengisian telah didownload. Ikuti format yang disediakan untuk import yang sukses.",
     });
   };
 
